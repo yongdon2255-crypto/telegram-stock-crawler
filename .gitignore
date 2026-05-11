@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+config/session.json
+
+# Telegram session string (저장 시 별도 파일로 쓸 경우)
+*.session
+session.txt
+
+# Raw data (원본 보관은 로컬만, git에 올리지 않음)
+inbox/
+processed/
+
+# Obsidian workspace files (vault 경로가 이 repo 안에 있을 경우)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Runtime
+*.pid
+.nyc_output/
+coverage/
+
+# IDE
+.vscode/settings.json
+.idea/
