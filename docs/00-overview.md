@@ -21,13 +21,17 @@
         │
         ▼
 [processor.js]
-  ├─ 텍스트 메시지   → 그대로 사용
-  ├─ PDF 첨부       → pdf-parse → 텍스트 추출
-  └─ 이미지 첨부    → claude CLI (vision) → 텍스트 추출
+  ├─ 텍스트 메시지            → Claude 요약
+  ├─ PDF 첨부                → pdf-parse v1 → 텍스트 → Claude 요약
+  ├─ 이미지 + 텍스트          → Apple Vision OCR → Claude 요약
+  └─ 이미지 단독              → Apple Vision OCR → 직접 저장 (Claude 토큰 없음)
         │
         ▼
 [claude-runner.js] — claude CLI subprocess (OAuth)
   → 1줄 요약, 카테고리, 중요도(상/중/하) 반환
+        │  (이미지 단독은 이 단계 생략)
+        ▼
+[ocr.swift] — Apple Vision, 한국어+영어, accurate 모드
         │
         ▼
 [obsidian.js] — .md 파일 생성 → Obsidian Vault
@@ -58,8 +62,9 @@ crawler/
 │   ├── auth.js             ← 최초 1회 세션 생성
 │   ├── monitor.js          ← polling 루프 + slow rule
 │   ├── handoff.js          ← inbox → processor 큐 이동
-│   ├── processor.js        ← OCR + 요약 조율
-│   ├── claude-runner.js    ← claude CLI subprocess 래퍼
+│   ├── processor.js        ← 메시지 타입 분기 + 요약 조율
+│   ├── claude-runner.js    ← claude CLI subprocess / Apple Vision OCR 래퍼
+│   ├── ocr.swift           ← Apple Vision OCR (한국어+영어)
 │   ├── obsidian.js         ← vault .md 저장
 │   ├── reporter.js         ← 텔레그램 상태 리포트 전송
 │   └── cli.js              ← 채널 관리 CLI
@@ -79,10 +84,11 @@ crawler/
 | 패키지 | 역할 |
 |--------|------|
 | `telegram` (gramjs) | MTProto 클라이언트 (수집 + 리포트 전송 공용) |
-| `pdf-parse` | PDF 텍스트 추출 |
+| `pdf-parse` v1 | PDF 텍스트 추출 (v2 API 비호환으로 v1 고정) |
 | `node-cron` | 프로세스 내 스케줄링 |
 | `dotenv` | 환경변수 로드 |
-| `claude` CLI | 요약·분류·OCR (OAuth, 별도 설치) |
+| `claude` CLI | 텍스트·PDF 요약·분류 (OAuth, 별도 설치) |
+| `swift` (macOS 내장) | Apple Vision OCR — 이미지 텍스트 추출 |
 
 ## 다음 단계
 

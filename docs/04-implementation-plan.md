@@ -32,20 +32,27 @@
 
 ### 처리 결과
 
-- Obsidian 저장 성공: **59건**
-- 이미지 OCR 실패: **16건** (아래 참고)
-- 텔레그램 리포트 전송: 정상
+| 결과 | 건수 |
+|------|------|
+| Obsidian 저장 성공 | **74건** |
+| 건너뜀 (이미지 기반 스캔 PDF — 텍스트 없음) | **1건** |
+| 텔레그램 리포트 전송 | 정상 |
 
 ### 이미지 OCR — Apple Vision으로 해결
 
-`claude -p` 가 이미지 경로 인자를 지원하지 않아 초기 16건 실패 → **`src/ocr.swift` (Apple Vision)** 로 대체.
+`claude -p` 가 이미지 경로 인자를 지원하지 않아 초기 16건 실패 → **`src/ocr.swift` (Apple Vision)** 로 대체. 전량 재처리 성공.
 
 | 메시지 타입 | OCR | 요약 | Claude 토큰 |
 |------------|-----|------|-------------|
 | 텍스트 | — | Claude | 소모 |
-| PDF | pdf-parse | Claude | 소모 |
+| PDF (텍스트형) | pdf-parse v1 | Claude | 소모 |
 | 이미지 + 텍스트 | Apple Vision | Claude | 소모 |
 | 이미지 단독 | Apple Vision | 없음 (OCR 직접 저장) | **소모 없음** |
+| PDF (스캔형) | pdf-parse v1 → 텍스트 없음 | 건너뜀 | 소모 없음 |
+
+### 주의 사항 — 패키지 버전
+
+- `pdf-parse`: **반드시 v1 고정** (`pdf-parse@1`). v2는 함수형 export에서 클래스 기반으로 API 변경되어 기존 코드와 비호환.
 
 ---
 
@@ -53,7 +60,8 @@
 
 ```bash
 npm init -y
-npm install telegram dotenv pdf-parse node-cron
+npm install telegram dotenv pdf-parse@1 node-cron
+# pdf-parse는 반드시 v1 고정 (v2는 API 변경으로 비호환)
 ```
 
 `config/channels.json` 초기값:
