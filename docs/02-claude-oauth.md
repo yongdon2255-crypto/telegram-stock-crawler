@@ -140,6 +140,22 @@ export async function extractTextFromImage(imagePath) {
 
 ---
 
+## 알려진 제한 — 이미지 OCR
+
+`claude -p "prompt" imagepath` 형태로 이미지 경로를 인자로 전달해도 claude CLI가 이미지를 처리하지 않음 (텍스트 프롬프트만 응답). 이미지 전용 메시지는 현재 건너뜀.
+
+```js
+// processor.js — 현재 동작
+} else if (item.mediaType === 'photo' && item.mediaPath) {
+  // claude CLI가 이미지를 인식하지 못해 OCR 실패 → 텍스트만 처리
+  const ocrText = await runClaude(OCR_PROMPT, item.mediaPath) // 실질적으로 무시됨
+}
+```
+
+개선 방향: `--file` 플래그 지원 여부 확인 또는 Tesseract(로컬 OCR) 연동.
+
+---
+
 ## 주의 사항
 
 - `@anthropic-ai/sdk` 패키지를 `require`/`import` 하지 않음 — 이 프로젝트는 CLI subprocess 방식만 사용.

@@ -4,16 +4,45 @@
 
 | # | 컴포넌트 | 파일 | 상태 |
 |---|----------|------|------|
-| 1 | MTProto 인증 | `src/auth.js` | 구현 예정 |
-| 2 | Polling + **slow rule** | `src/monitor.js` | 구현 예정 |
-| 3 | inbox 이동 | `src/handoff.js` | 구현 예정 |
-| 4 | OCR + 요약 | `src/processor.js` | 구현 예정 |
-| 5 | Claude CLI 래퍼 | `src/claude-runner.js` | 구현 예정 |
-| 6 | Obsidian 저장 | `src/obsidian.js` | 구현 예정 |
-| 7 | **텔레그램 리포트** | `src/reporter.js` | 구현 예정 |
-| 8 | 채널 관리 CLI | `src/cli.js` | 구현 예정 |
+| 1 | MTProto 인증 | `src/auth.js` | ✅ 완료 |
+| 2 | Polling + **slow rule** | `src/monitor.js` | ✅ 완료 |
+| 3 | inbox 이동 | `src/handoff.js` | ✅ 완료 |
+| 4 | OCR + 요약 | `src/processor.js` | ✅ 완료 |
+| 5 | Claude CLI 래퍼 | `src/claude-runner.js` | ✅ 완료 |
+| 6 | Obsidian 저장 | `src/obsidian.js` | ✅ 완료 |
+| 7 | **텔레그램 리포트** | `src/reporter.js` | ✅ 완료 |
+| 8 | 채널 관리 CLI | `src/cli.js` | ✅ 완료 |
 
 > REST API 서버는 이번 범위에서 제외. 채널 관리는 CLI(`src/cli.js`)로 처리.
+
+---
+
+## 실제 테스트 결과 (2026-05-11, 24시간 backfill)
+
+### 수집
+
+| 채널 | 수집 건수 |
+|------|----------|
+| @kiwoom_semibat | 21건 |
+| @kwusa | 6건 |
+| @merITz_tech | 35건 |
+| @skitteam | 10건 |
+| @KISemicon | 3건 |
+| **합계** | **75건** |
+
+### 처리 결과
+
+- Obsidian 저장 성공: **59건**
+- 이미지 OCR 실패: **16건** (아래 참고)
+- 텔레그램 리포트 전송: 정상
+
+### 알려진 제한 — 이미지 OCR
+
+`claude -p "prompt" imagepath` 형태로 이미지 파일을 전달하면 claude CLI가 이미지를 무시하고 텍스트 프롬프트만 처리함. 이미지 첨부 메시지는 현재 처리 실패.
+
+**임시 대응:** 텍스트가 함께 있는 이미지 메시지는 텍스트 부분만 요약. 이미지 전용 메시지는 건너뜀.
+
+**개선 방향:** claude CLI의 `--file` 플래그 또는 별도 Vision API 연동 검토 필요.
 
 ---
 
