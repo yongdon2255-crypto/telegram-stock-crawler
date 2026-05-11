@@ -5,6 +5,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import cron from 'node-cron'
+import { reportCycle } from './reporter.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const CHANNELS_FILE = path.join(ROOT, 'config', 'channels.json')
@@ -164,7 +165,11 @@ if (isBackfill || channelFilter) {
     console.log(`[${new Date().toISOString()}] Cycle 시작`)
     const results = await runCycle(client)
     console.log('Cycle 완료:', results)
-    // Phase 5에서 reporter.js 호출 추가
+    await reportCycle(client, {
+      channelCount: results.length,
+      results,
+      savedCount: results.reduce((s, r) => s + (r.count || 0), 0),
+    })
   })
 }
 
