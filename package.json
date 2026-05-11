@@ -1,0 +1,19 @@
+{
+  "name": "crawler",
+  "version": "1.0.0",
+  "description": "Korean stock market Telegram channel crawler → Obsidian",
+  "type": "module",
+  "scripts": {
+    "auth":     "node src/auth.js",
+    "monitor":  "node src/monitor.js",
+    "process":  "node src/handoff.js --once",
+    "backfill": "node src/monitor.js --backfill",
+    "channels": "node src/cli.js"
+  },
+  "dependencies": {
+    "dotenv":    "^17.4.2",
+    "node-cron": "^4.2.1",
+    "pdf-parse": "^2.4.5",
+    "telegram":  "^2.26.22"
+  }
+}

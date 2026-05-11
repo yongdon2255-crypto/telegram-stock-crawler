@@ -1,0 +1,7 @@
+{
+  "stockNewsFolder":    "Stock News",
+  "dailyDigestFolder":  "Daily Digest",
+  "retentionDays":      7,
+  "digestSchedule":     "0 14 * * 1-5",
+  "backfillDefaultHours": 39
+}

@@ -1,0 +1,9 @@
+{
+  "channels": [
+    { "handle": "@kiwoom_semibat", "category": "반도체",  "large": true,  "pollingIntervalSec": 3600, "enabled": true },
+    { "handle": "@kwusa",          "category": "미국주식", "large": false, "pollingIntervalSec": 3600, "enabled": true },
+    { "handle": "@merITz_tech",    "category": "IT/Tech", "large": false, "pollingIntervalSec": 3600, "enabled": true },
+    { "handle": "@skitteam",       "category": "IT/Tech", "large": false, "pollingIntervalSec": 3600, "enabled": true },
+    { "handle": "@KISemicon",      "category": "반도체",  "large": false, "pollingIntervalSec": 3600, "enabled": true }
+  ]
+}

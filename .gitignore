@@ -12,8 +12,10 @@ config/session.json
 session.txt
 
 # Raw data (원본 보관은 로컬만, git에 올리지 않음)
-inbox/
-processed/
+inbox/*
+!inbox/.gitkeep
+processed/*
+!processed/.gitkeep
 
 # Obsidian workspace files (vault 경로가 이 repo 안에 있을 경우)
 .obsidian/workspace.json
@@ -28,7 +30,8 @@ docs/image/
 **/.DS_Store
 
 # Logs
-logs/
+logs/*
+!logs/.gitkeep
 *.log
 npm-debug.log*
 
