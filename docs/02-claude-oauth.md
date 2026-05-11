@@ -140,19 +140,35 @@ export async function extractTextFromImage(imagePath) {
 
 ---
 
-## 알려진 제한 — 이미지 OCR
+## 이미지 OCR — Apple Vision (macOS 내장)
 
-`claude -p "prompt" imagepath` 형태로 이미지 경로를 인자로 전달해도 claude CLI가 이미지를 처리하지 않음 (텍스트 프롬프트만 응답). 이미지 전용 메시지는 현재 건너뜀.
+`claude -p` 는 이미지 파일 경로를 인자로 받지 않음. 대신 **macOS 내장 Vision 프레임워크**를 Swift subprocess로 호출해 OCR 처리.
+
+```
+이미지 첨부 메시지
+    │
+    ▼
+src/ocr.swift  (Apple Vision, 한국어+영어)
+    │  OCR 텍스트 stdout 출력
+    ▼
+텍스트 메시지가 함께 있으면 → Claude 요약
+텍스트 없는 이미지 단독 메시지 → OCR 결과 직접 저장 (Claude 토큰 소모 없음)
+```
 
 ```js
-// processor.js — 현재 동작
-} else if (item.mediaType === 'photo' && item.mediaPath) {
-  // claude CLI가 이미지를 인식하지 못해 OCR 실패 → 텍스트만 처리
-  const ocrText = await runClaude(OCR_PROMPT, item.mediaPath) // 실질적으로 무시됨
+// claude-runner.js
+export async function extractImageText(imagePath) {
+  const { stdout } = await execFileAsync('swift', [OCR_SCRIPT, imagePath], {
+    timeout: 30_000,
+  })
+  return stdout.trim()
 }
 ```
 
-개선 방향: `--file` 플래그 지원 여부 확인 또는 Tesseract(로컬 OCR) 연동.
+**특징:**
+- 증권사 리서치 차트·표·숫자 정확히 인식
+- 완전 로컬, 추가 비용 없음
+- `swift` 명령어는 macOS에 기본 설치
 
 ---
 

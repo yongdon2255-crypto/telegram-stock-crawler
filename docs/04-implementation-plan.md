@@ -36,13 +36,16 @@
 - 이미지 OCR 실패: **16건** (아래 참고)
 - 텔레그램 리포트 전송: 정상
 
-### 알려진 제한 — 이미지 OCR
+### 이미지 OCR — Apple Vision으로 해결
 
-`claude -p "prompt" imagepath` 형태로 이미지 파일을 전달하면 claude CLI가 이미지를 무시하고 텍스트 프롬프트만 처리함. 이미지 첨부 메시지는 현재 처리 실패.
+`claude -p` 가 이미지 경로 인자를 지원하지 않아 초기 16건 실패 → **`src/ocr.swift` (Apple Vision)** 로 대체.
 
-**임시 대응:** 텍스트가 함께 있는 이미지 메시지는 텍스트 부분만 요약. 이미지 전용 메시지는 건너뜀.
-
-**개선 방향:** claude CLI의 `--file` 플래그 또는 별도 Vision API 연동 검토 필요.
+| 메시지 타입 | OCR | 요약 | Claude 토큰 |
+|------------|-----|------|-------------|
+| 텍스트 | — | Claude | 소모 |
+| PDF | pdf-parse | Claude | 소모 |
+| 이미지 + 텍스트 | Apple Vision | Claude | 소모 |
+| 이미지 단독 | Apple Vision | 없음 (OCR 직접 저장) | **소모 없음** |
 
 ---
 
