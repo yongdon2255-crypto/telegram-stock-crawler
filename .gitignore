@@ -20,6 +20,9 @@ processed/
 .obsidian/workspace-mobile.json
 .obsidian/cache
 
+# 개인 스크린샷
+docs/image/
+
 # macOS
 .DS_Store
 **/.DS_Store
