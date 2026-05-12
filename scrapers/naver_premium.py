@@ -42,6 +42,14 @@ def absolute_url(src: str) -> str:
     return ""
 
 
+def markdown_image(src: str, alt: str = "이미지") -> str:
+    url = absolute_url(src)
+    if not url:
+        return ""
+    safe_alt = alt.replace("[", "").replace("]", "").strip() or "이미지"
+    return f"![{safe_alt}]({url})"
+
+
 def first(node, selector):
     """node.css(selector).first 의 None-safe 헬퍼."""
     if node is None:
@@ -135,6 +143,40 @@ def extract(page) -> dict:
             body_text = viewer.text or ""
         body_text = re.sub(r"\s+\n", "\n", body_text).strip()
 
+    # Obsidian용 Markdown: SmartEditor 컴포넌트 순서대로 텍스트와 이미지를 섞는다.
+    markdown_parts: list[str] = []
+    for component in viewer.css(".se-component"):
+        component_class = attr(component, "class")
+        if "se-oglink" in component_class:
+            continue
+
+        if "se-image" in component_class:
+            for img in component.css("img"):
+                src = attr(img, "data-lazy-src") or attr(img, "src")
+                alt = attr(img, "alt", "이미지")
+                image_md = markdown_image(src, alt)
+                if image_md:
+                    markdown_parts.append(image_md)
+            caption = "\n".join(
+                text_of(node)
+                for node in component.css(".se-text-paragraph")
+                if text_of(node)
+            ).strip()
+            if caption:
+                markdown_parts.append(caption)
+            continue
+
+        component_text_parts: list[str] = []
+        for node in component.css(".se-text-paragraph"):
+            t = text_of(node)
+            if t:
+                component_text_parts.append(t)
+        component_text = "\n".join(component_text_parts).strip()
+        if component_text:
+            markdown_parts.append(component_text)
+
+    body_markdown = "\n\n".join(markdown_parts).strip() or body_text
+
     # 이미지: SmartEditor 이미지 컴포넌트
     images: list[str] = []
     for img in viewer.css(".se-image img"):
@@ -181,6 +223,7 @@ def extract(page) -> dict:
         "categoryCode": category_code,
         "summary": og_desc,
         "body": body_text,
+        "bodyMarkdown": body_markdown,
         "bodyLength": len(body_text),
         "totalTextLength": total_text_length,
         "images": images,

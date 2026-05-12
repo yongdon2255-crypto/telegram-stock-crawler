@@ -52,7 +52,7 @@ async function main() {
   const title = data.title || data.id || 'naver-premium'
   const filename = `naver-premium-mesegong_${time}_${safeFilename(title)}.md`
   const filepath = path.join(dir, filename)
-  const images = (data.images || []).map((src, i) => `${i + 1}. ${src}`).join('\n')
+  const original = data.bodyMarkdown || data.body || ''
 
   const content = `---
 source: "naver-premium-mesegong"
@@ -73,11 +73,7 @@ ${data.summary || ''}
 
 ## 원문
 
-${data.body || ''}
-
-## 이미지
-
-${images || '없음'}
+${original}
 
 ---
 *수집: naver-premium-mesegong · ${date} ${time.slice(0, 2)}:${time.slice(2)} KST*
