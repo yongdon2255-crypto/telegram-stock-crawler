@@ -1,9 +1,10 @@
 import puppeteer from 'puppeteer'
+import * as cheerio from 'cheerio'
 import { readFile, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { fetchHtml, parseList, parseArticle, resolveUrl } from './web-fetcher.js'
+import { fetchHtml, parseList, parseArticle, resolveUrl, fetchNaverPremium, NaverSessionExpiredError } from './web-fetcher.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SOURCES_PATH   = join(__dirname, '../config/web-sources.json')
@@ -100,6 +101,64 @@ async function crawlStatic(source, state) {
   return results
 }
 
+// ── naver premium (Scrapling 워커 호출) ───────────────────────────────────────
+
+async function crawlNaverPremium(source, state) {
+  // 목록 페이지에서 콘텐츠 URL 후보를 수집
+  let listHtml
+  try {
+    listHtml = await fetchHtml(source.listUrl)
+  } catch (err) {
+    console.error(`[web] naver list fetch failed ${source.listUrl}: ${err.message}`)
+    return []
+  }
+  const $ = cheerio.load(listHtml)
+  const pattern = source.articleUrlPattern || '/contents/contents/'
+  const urls = []
+  $('a').each((_, el) => {
+    const href = $(el).attr('href') || ''
+    if (!href.includes(pattern)) return
+    const abs = resolveUrl(source.listUrl, href)
+    if (!abs || urls.includes(abs)) return
+    urls.push(abs)
+  })
+
+  const fresh = urls.filter(u => isNew(state, source.id, u)).slice(0, 5)
+  const results = []
+  for (const url of fresh) {
+    try {
+      const data = await fetchNaverPremium(url)
+      results.push({
+        title: data.title,
+        url:   data.sourceUrl || url,
+        date:  data.publishedAt || '',
+        body:  data.body || '',
+        meta:  {
+          channel:        data.channel,
+          author:         data.author,
+          isPaywalled:    data.isPaywalled,
+          accessLevel:    data.accessLevel,
+          bodyLength:     data.bodyLength,
+          totalLength:    data.totalTextLength,
+          images:         data.images,
+          thumbnail:      data.thumbnail,
+        },
+      })
+      markSeen(state, source.id, url)
+    } catch (err) {
+      if (err instanceof NaverSessionExpiredError) {
+        console.error(`[web] naver SESSION_EXPIRED: ${err.message}`)
+        const e = new Error(`NAVER_LOGIN_REQUIRED: ${source.id}`)
+        e.code = 'NAVER_LOGIN_REQUIRED'
+        throw e
+      }
+      console.error(`[web] naver article error ${url}: ${err.message}`)
+    }
+    await sleep(180_000)  // 채널당 180s 권장 (요청 빈도 가드)
+  }
+  return results
+}
+
 // ── main export ────────────────────────────────────────────────────────────────
 
 export async function runWebCrawl() {
@@ -110,11 +169,18 @@ export async function runWebCrawl() {
   let totalNew = 0
 
   for (const source of enabled) {
-    console.log(`[web] crawling ${source.name} (${source.dynamic ? 'dynamic' : 'static'})…`)
+    const sourceType = source.type
+      || (source.dynamic ? 'dynamic' : 'static')
+    console.log(`[web] crawling ${source.name} (${sourceType})…`)
     try {
-      const articles = source.dynamic
-        ? await crawlDynamic(source, state)
-        : await crawlStatic(source, state)
+      let articles
+      if (sourceType === 'naver-premium') {
+        articles = await crawlNaverPremium(source, state)
+      } else if (sourceType === 'dynamic') {
+        articles = await crawlDynamic(source, state)
+      } else {
+        articles = await crawlStatic(source, state)
+      }
 
       for (const art of articles) {
         const text = [art.title, art.body].filter(Boolean).join('\n\n')

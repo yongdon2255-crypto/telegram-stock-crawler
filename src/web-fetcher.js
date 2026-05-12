@@ -1,4 +1,14 @@
 import * as cheerio from 'cheerio'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const execFileP = promisify(execFile)
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const SCRAPERS_DIR = join(__dirname, '..', 'scrapers')
+const NAVER_WORKER = join(SCRAPERS_DIR, 'naver_premium.py')
+const VENV_PYTHON  = join(SCRAPERS_DIR, '.venv', 'bin', 'python')
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
@@ -50,5 +60,35 @@ export function resolveUrl(base, href) {
     return new URL(href, base).href
   } catch {
     return ''
+  }
+}
+
+export class NaverSessionExpiredError extends Error {
+  constructor(msg) {
+    super(msg)
+    this.name = 'NaverSessionExpiredError'
+    this.code = 'SESSION_EXPIRED'
+  }
+}
+
+export async function fetchNaverPremium(url, { python, timeoutMs = 120_000 } = {}) {
+  const pythonBin = python || process.env.NAVER_PYTHON || VENV_PYTHON
+  try {
+    const { stdout } = await execFileP(pythonBin, [NAVER_WORKER, url], {
+      timeout: timeoutMs,
+      maxBuffer: 8 * 1024 * 1024,
+      env: process.env,
+    })
+    const trimmed = stdout.trim()
+    if (!trimmed) throw new Error('naver_premium.py: empty stdout')
+    return JSON.parse(trimmed)
+  } catch (err) {
+    if (err && err.code === 2) {
+      throw new NaverSessionExpiredError(err.stderr?.trim() || 'session expired')
+    }
+    const detail = err.stderr ? `: ${err.stderr.trim()}` : ''
+    const e = new Error(`fetchNaverPremium failed (exit=${err.code ?? '?'})${detail}`)
+    e.cause = err
+    throw e
   }
 }

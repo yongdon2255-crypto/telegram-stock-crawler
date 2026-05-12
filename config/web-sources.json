@@ -56,6 +56,18 @@
       },
       "pollingIntervalSec": 3600,
       "enabled": true
+    },
+    {
+      "id": "naver-premium-mesegong",
+      "name": "메르를 통해 엿보는 세상 공부",
+      "type": "naver-premium",
+      "listUrl": "https://contents.premium.naver.com/mesegong/contents",
+      "baseUrl": "https://contents.premium.naver.com",
+      "articleUrlPattern": "/mesegong/contents/contents/",
+      "category": "주식분석",
+      "requiresAuth": true,
+      "pollingIntervalSec": 3600,
+      "enabled": false
     }
   ]
 }

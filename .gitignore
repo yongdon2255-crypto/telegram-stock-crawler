@@ -45,6 +45,14 @@ npm-debug.log*
 .nyc_output/
 coverage/
 
+# Python (scrapers/)
+scrapers/.venv/
+scrapers/__pycache__/
+scrapers/**/__pycache__/
+# Naver 세션 자격증명 (Chromium 영속 프로필 — 절대 커밋 금지)
+scrapers/.state/*
+!scrapers/.state/.gitkeep
+
 # IDE
 .vscode/settings.json
 .idea/
