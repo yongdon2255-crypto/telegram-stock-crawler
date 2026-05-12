@@ -2,51 +2,52 @@
 
 ## 목적
 
-한국 증권사 텔레그램 채널을 자동으로 수집·분류·요약해 Obsidian에 저장하는 로컬 인텔리전스 파이프라인.
+한국 증권사 텔레그램 채널과 경제 뉴스 사이트를 자동으로 수집·분류·요약해 Obsidian에 저장하는 로컬 인텔리전스 파이프라인.
 
 ## 전체 흐름
 
 ```
-텔레그램 채널 (공개/비공개)
-        │
-        ▼
-[monitor.js] — 1시간 polling cycle
-  └─ slow rule: 채널당 60s(소형) ~ 180s(대형) 딜레이
-        │  raw JSON (메시지 + 첨부파일)
-        ▼
-[inbox/]  ←────────── 7일 보관 후 자동 삭제
-        │
-        ▼
-[handoff.js] — inbox → processor 큐로 이동
-        │
-        ▼
-[processor.js]
-  ├─ 텍스트 메시지            → Claude 요약
-  ├─ PDF 첨부                → pdf-parse v1 → 텍스트 → Claude 요약
-  ├─ 이미지 + 텍스트          → Apple Vision OCR → Claude 요약
-  └─ 이미지 단독              → Apple Vision OCR → 직접 저장 (Claude 토큰 없음)
-        │
-        ▼
-[claude-runner.js] — claude CLI subprocess (OAuth)
-  → 1줄 요약, 카테고리, 중요도(상/중/하) 반환
-        │  (이미지 단독은 이 단계 생략)
-        ▼
-[ocr.swift] — Apple Vision, 한국어+영어, accurate 모드
-        │
-        ▼
-[obsidian.js] — .md 파일 생성 → Obsidian Vault
-        │
-        ▼
-[reporter.js] — cycle 완료 후 사용자 텔레그램으로 상태 리포트 전송
+텔레그램 채널 (공개/비공개)           웹 뉴스 소스 (경제 포털)
+        │                                   │
+        ▼                                   ▼
+[monitor.js] — 1h polling            [web-crawler.js] — Puppeteer/fetch
+  └─ slow rule: 60s ~ 180s 딜레이      └─ web-fetcher.js (cheerio 파싱)
+        │  raw JSON (메시지+첨부파일)         │  raw JSON (기사 본문)
+        └──────────────┬─────────────────────┘
+                       ▼
+               [inbox/]  ←────── 7일 보관 후 자동 삭제
+                       │
+                       ▼
+               [handoff.js] — inbox → processor 큐로 이동
+                       │
+                       ▼
+               [processor.js]
+                 ├─ 텍스트 메시지         → Claude 요약
+                 ├─ PDF 첨부             → pdf-parse v1 → 텍스트 → Claude 요약
+                 ├─ 이미지 + 텍스트       → Apple Vision OCR → Claude 요약
+                 └─ 이미지 단독           → Apple Vision OCR → 직접 저장 (Claude 토큰 없음)
+                       │
+                       ▼
+               [claude-runner.js] — claude CLI subprocess (OAuth)
+                 → 1줄 요약, 카테고리, 중요도(상/중/하) 반환
+                       │  (이미지 단독은 이 단계 생략)
+                       ▼
+               [ocr.swift] — Apple Vision, 한국어+영어, accurate 모드
+                       │
+                       ▼
+               [obsidian.js] — .md 파일 생성 → Obsidian Vault
+                       │
+                       ▼
+               [reporter.js] — cycle 완료 후 사용자 텔레그램으로 상태 리포트 전송
 ```
 
 ## 카테고리 체계
 
-| 카테고리 | 주요 채널 예시 |
-|----------|---------------|
-| 반도체   | @kiwoom_semibat, @KISemicon |
-| 미국주식 | @kwusa |
-| IT/Tech  | @merITz_tech, @skitteam |
+| 카테고리 | 텔레그램 채널 | 웹 소스 |
+|----------|--------------|---------|
+| 반도체   | @kiwoom_semibat, @KISemicon | 한국경제 반도체 태그 |
+| 미국주식 | @kwusa | 연합인포맥스 증권, 매일경제 증권 |
+| IT/Tech  | @merITz_tech, @skitteam | — |
 
 ## 파일 레이아웃
 
@@ -56,11 +57,14 @@ crawler/
 ├── .env                    ← 시크릿 (git 제외)
 ├── .env.example            ← 템플릿 (git 포함)
 ├── config/
-│   ├── channels.json       ← 채널 목록 + large 플래그
+│   ├── channels.json       ← 텔레그램 채널 목록 + large 플래그
+│   ├── web-sources.json    ← 웹 크롤 소스 목록 + 셀렉터
 │   └── settings.json       ← vault 경로, 보존 기간, digest 스케줄
 ├── src/
 │   ├── auth.js             ← 최초 1회 세션 생성
 │   ├── monitor.js          ← polling 루프 + slow rule
+│   ├── web-crawler.js      ← Puppeteer/fetch 웹 크롤러
+│   ├── web-fetcher.js      ← fetch + cheerio 정적 파싱 헬퍼
 │   ├── handoff.js          ← inbox → processor 큐 이동
 │   ├── processor.js        ← 메시지 타입 분기 + 요약 조율
 │   ├── claude-runner.js    ← claude CLI subprocess / Apple Vision OCR 래퍼
@@ -85,6 +89,8 @@ crawler/
 |--------|------|
 | `telegram` (gramjs) | MTProto 클라이언트 (수집 + 리포트 전송 공용) |
 | `pdf-parse` v1 | PDF 텍스트 추출 (v2 API 비호환으로 v1 고정) |
+| `puppeteer` | 웹 크롤링 — 동적(SPA) 페이지 |
+| `cheerio` | 웹 크롤링 — 정적 HTML 파싱 |
 | `node-cron` | 프로세스 내 스케줄링 |
 | `dotenv` | 환경변수 로드 |
 | `claude` CLI | 텍스트·PDF 요약·분류 (OAuth, 별도 설치) |
@@ -96,3 +102,4 @@ crawler/
 2. [Claude OAuth 연동](02-claude-oauth.md) — CLI 경로 및 동작 확인
 3. [Obsidian 연동](03-obsidian-setup.md) — vault 경로, launchd 스케줄링
 4. [구현 계획](04-implementation-plan.md) — 단계별 코드 구현 순서
+5. [웹 크롤러 계획](05-web-crawler-plan.md) — Puppeteer 기반 HTML 크롤링

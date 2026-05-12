@@ -7,6 +7,7 @@ node_modules/
 !.env.example
 config/session.json
 config/state.json
+config/web-state.json
 
 # Telegram session string (저장 시 별도 파일로 쓸 경우)
 *.session

@@ -4,16 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Purpose
 
-Korean stock market intelligence crawler: monitors Telegram channels (증권사 리서치, IT/반도체, 미국주식), extracts text from PDFs and images, summarizes via Claude (OAuth subscription — not API keys), writes structured Markdown into an Obsidian vault, and sends a status report back to the user via Telegram after each cycle.
+Korean stock market intelligence crawler: monitors Telegram channels (증권사 리서치, IT/반도체, 미국주식) **and Korean financial news websites** (via Puppeteer/fetch), extracts text from PDFs and images, summarizes via Claude (OAuth subscription — not API keys), writes structured Markdown into an Obsidian vault, and sends a status report back to the user via Telegram after each cycle.
 
 ## Key Commands
 
 ```bash
 npm install          # install dependencies
 node src/auth.js     # first-time only: generate TG_SESSION
-npm run monitor      # start polling loop (1h cycle)
+npm run monitor      # start polling loop (1h cycle, Telegram + Web)
 npm run process      # manually trigger inbox → Obsidian pipeline
 npm run backfill     # fetch recent N hours for all channels
+node -e "import('./src/web-crawler.js').then(m=>m.runWebCrawl())"  # web crawl only
 node src/cli.js add-channel @handle --category 반도체 --large
 node src/cli.js list-channels
 ```
@@ -21,17 +22,26 @@ node src/cli.js list-channels
 ## Architecture
 
 ```
-Telegram MTProto (gramjs)
-    └─▶ src/monitor.js          polling loop + slow rule (60–180s/채널)
-         └─▶ src/handoff.js     moves inbox/ files into processor queue
-              └─▶ src/processor.js    OCR (pdf-parse + Claude vision), calls claude-runner
-                   └─▶ src/obsidian.js    writes .md into Obsidian vault
-                   └─▶ src/reporter.js    sends cycle summary to Telegram (same MTProto session)
+Telegram MTProto (gramjs)         Web News Sites (HTML)
+    └─▶ src/monitor.js                └─▶ src/web-crawler.js  Puppeteer/fetch
+         (polling + slow rule)              └─▶ src/web-fetcher.js  cheerio parsing
+              │                                      │
+              └──────────────────────────────────────┘
+                                   ▼
+                          inbox/  (raw JSON, same schema)
+                                   │
+                         src/handoff.js   moves files into processor queue
+                                   │
+                         src/processor.js  OCR (pdf-parse + Apple Vision), claude-runner
+                                   │
+                         src/obsidian.js   writes .md into Obsidian vault
+                         src/reporter.js   sends cycle summary to Telegram
 
-config/channels.json   channel registry — handle, category, large(bool), pollingIntervalSec
-config/settings.json   vault path, retention days, digest schedule (cron)
-inbox/                 raw JSON, 7-day TTL
-processed/             archive after Obsidian write
+config/channels.json    Telegram channel registry — handle, category, large(bool)
+config/web-sources.json web source registry — url, selectors, dynamic(bool)
+config/settings.json    vault path, retention days, digest schedule (cron)
+inbox/                  raw JSON, 7-day TTL
+processed/              archive after Obsidian write
 ```
 
 ## Slow Rule (monitor.js)

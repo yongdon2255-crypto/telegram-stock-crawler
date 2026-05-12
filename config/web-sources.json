@@ -1,0 +1,61 @@
+{
+  "sources": [
+    {
+      "id": "einfomax-stock",
+      "name": "연합인포맥스 증권",
+      "listUrl": "https://news.einfomax.co.kr/news/articleList.html?sc_section_code=S1N1",
+      "baseUrl": "https://news.einfomax.co.kr",
+      "category": "미국주식",
+      "dynamic": false,
+      "selectors": {
+        "list": "ul.type1 li",
+        "title": "h4.titles a",
+        "link": "h4.titles a",
+        "date": "span.byline em"
+      },
+      "articleSelectors": {
+        "body": "div.article-body, article#article-view-content-div"
+      },
+      "pollingIntervalSec": 3600,
+      "enabled": true
+    },
+    {
+      "id": "mk-stock",
+      "name": "매일경제 증권",
+      "listUrl": "https://www.mk.co.kr/news/stock/",
+      "baseUrl": "https://www.mk.co.kr",
+      "category": "미국주식",
+      "dynamic": false,
+      "selectors": {
+        "list": "ul.top_news_list li",
+        "title": "a",
+        "link": "a",
+        "date": "span.date"
+      },
+      "articleSelectors": {
+        "body": "section.sec_body, div.news_cnt_detail_wrap"
+      },
+      "pollingIntervalSec": 3600,
+      "enabled": true
+    },
+    {
+      "id": "hankyung-semicon",
+      "name": "한국경제 반도체",
+      "listUrl": "https://www.hankyung.com/tag/%EB%B0%98%EB%8F%84%EC%B2%B4",
+      "baseUrl": "https://www.hankyung.com",
+      "category": "반도체",
+      "dynamic": false,
+      "selectors": {
+        "list": "ul.news-list li",
+        "title": "a",
+        "link": "a",
+        "date": "span.date"
+      },
+      "articleSelectors": {
+        "body": "div.article-body"
+      },
+      "pollingIntervalSec": 3600,
+      "enabled": true
+    }
+  ]
+}
